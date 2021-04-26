@@ -1,0 +1,57 @@
+#isl_nearest_form input[type='text'] {
+	display: inline-block;
+	width: 80%;
+	height: 40px;
+	border: 1px solid #C0C0C0;
+	border-right-width: 0;
+	color: #899499;
+	margin: 0;
+}
+#isl_nearest_form input[type='text']:focus {
+	box-shadow:none;
+}
+
+#isl_nearest_form button {
+	font-size: 16px;
+	width: 20%;
+	height: 40px;
+	border: 1px solid #C0C0C0;
+	border-left-width: 0;
+	display: inline-block;
+	vertical-align: top;
+	position: relative;
+}
+
+#isl_nearest_form #isl_icon_search,
+#isl_nearest_form #isl_icon_wait {
+	content: url('../images/ico-search.svg');
+	width: 30px;
+	height: 30px;
+	position: absolute;
+	top: 5px;
+	right: 5px;
+}
+#isl_nearest_form #isl_icon_search
+#isl_nearest_form #isl_icon_wait {
+	height: 20px !important;
+	width: 20px !important;
+}
+
+#isl_nearest_form button #isl_icon_search:hover{
+	cursor: pointer;
+}
+
+@keyframes rotation {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(359deg);
+  }
+}
+
+#isl_nearest_form #isl_icon_wait {
+	content: url('../images/ico-wait.svg');
+	animation: rotation 8s infinite linear;
+	display: none;
+}
