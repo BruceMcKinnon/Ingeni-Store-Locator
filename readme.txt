@@ -4,7 +4,7 @@ Contributors: Bruce McKinnon
 Tags: content, receipties
 Requires at least: 5.0
 Tested up to: 5.7
-Stable tag: 2021.01
+Stable tag: 2021.02
 
 A Store locator with map and freeform location lookup (for finding stores closest to a location), and bulk import.
 
@@ -22,7 +22,7 @@ All based on OpenStreetMap, Leaflet and Nominatim.
 
 == Installation ==
 
-1. Upload 'iingeni-store-locator' folder to the '/wp-content/plugins/' directory.
+1. Upload 'ingeni-store-locator' folder to the '/wp-content/plugins/' directory.
 
 2. Activate the plugin through the 'Plugins' menu in WordPress.
 
@@ -87,3 +87,9 @@ For example:
 == Changelog ==
 
 2021.01 - 27 April 2021 - Initial version
+
+
+2021.02 - ingeni_store_locator_shortcode() - Don't include locations that have no lat/lng specified
+				- Now supports Mapbox (API key required) in addtion to Nominitim
+				- Admin screens now include a Get Lat/Lng button
+

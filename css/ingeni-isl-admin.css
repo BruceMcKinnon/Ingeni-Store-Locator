@@ -101,3 +101,82 @@
 .isl_row > .row > .cell.full {
 	width: 100%;
 }
+
+
+
+.isl_settings h2 {
+	color: #34495E;
+	border-top: 1px solid #34495E;
+	margin-top: 15px;
+	padding-top: 15px;
+}
+
+
+
+.isl-settings .wrap {
+	margin-bottom: 30px;
+	display: block;
+}
+
+table.isl-importer {
+	max-width: 640px;
+}
+table.isl-importer td {
+	width: 20%;
+
+}
+
+
+
+.submit_wrap {
+	width: 100%;
+	position: relative;
+}
+.submit_wrap .button-primary {
+	float: left;
+	margin-top: 10px;
+}
+#loading_anim {
+	display: none;
+	position: relative;
+	margin: 0 0 0 15px;
+	width: 200px;
+	height: 50px;
+	float: left;
+}
+.centered{
+	width: 200px;
+	height: 50px;
+	position:absolute;
+	top:50%;
+	left:50%;
+	transform:translate(-50%,-50%);
+}
+.blob-1,.blob-2{
+	width:50px;
+	height:50px;
+	position:absolute;
+	background: rgb(255, 195, 0);
+	border-radius:50%;
+	top:50%;left:50%;
+	transform:translate(-50%,-50%);
+}
+.blob-1{
+	left:20%;
+	animation:osc-l 2.5s ease infinite;
+}
+.blob-2{
+	left:80%;
+	animation:osc-r 2.5s ease infinite;
+	background:rgba(2, 84, 165, 0.7);
+}
+@keyframes osc-l{
+	0%{left:20%;}
+	50%{left:50%;}
+	100%{left:20%;}
+}
+@keyframes osc-r{
+	0%{left:80%;}
+	50%{left:50%;}
+	100%{left:80%;}
+}

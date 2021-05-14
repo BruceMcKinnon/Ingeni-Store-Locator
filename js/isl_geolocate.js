@@ -4,29 +4,66 @@ jQuery( document ).ready(function() {
 	// Get the input field
 	var loc = document.getElementById('loc_lookup');
 
-	// Execute a function when the user releases a key on the keyboard
-	loc.addEventListener("keyup", function(event) {
-		// Number 13 is the "Enter" key on the keyboard
-		if (event.keyCode === 13) {
-			// Cancel the default action, if needed
-			event.preventDefault();
-			// Trigger the button element with a click
-			document.getElementById("isl_geo_btn").click();
-		}
-	});
+	if (loc) {
+		// Execute a function when the user releases a key on the keyboard
+		loc.addEventListener("keyup", function(event) {
+			// Number 13 is the "Enter" key on the keyboard
+			if (event.keyCode === 13) {
+				// Cancel the default action, if needed
+				event.preventDefault();
+				// Trigger the button element with a click
+				document.getElementById("isl_geo_store_search_btn").click();
+			}
+		});
+	}
 });
 
 
-function isl_geo() { 
-	jQuery("isl_icon_search2").hide();
-	jQuery("#isl_icon_wait").show();
+function isl_geo(country, max_stores) { 
+	if (jQuery('#isl_icon_search').length > 0) {
+		jQuery("#isl_icon_search").hide();
+		jQuery("#isl_icon_wait").show();
+	}
 
-	var loc = document.getElementsByName('loc_lookup')[0].value;
+	var loc = '';
+	var extra_data = '';
+
+	if (jQuery('#loc_lookup').length > 0) {
+		loc = document.getElementsByName('loc_lookup')[0].value;
+	} else if (jQuery('#isl_street_address1').length > 0) {
+		loc = document.getElementsByName('isl_street_address1')[0].value;
+
+		// If addr2 is specified, use this in preference to addr1
+		extra_data = document.getElementsByName('isl_street_address2')[0].value;
+		if (extra_data.length > 0) {
+			loc= extra_data;
+		}
+
+		extra_data = document.getElementsByName('isl_town')[0].value;
+		if (extra_data.length > 0) {
+			loc += ' '+extra_data;
+		}
+		extra_data = document.getElementsByName('isl_state')[0].value;
+		if (extra_data.length > 0) {
+			loc += ' '+extra_data;
+		}
+		extra_data = document.getElementsByName('isl_postcode')[0].value;
+		if (extra_data.length > 0) {
+			loc += ' '+extra_data;
+		}
+		extra_data = document.getElementsByName('isl_country')[0].value;
+		if (extra_data.length > 0) {
+			loc += ' '+extra_data;
+		}
+	}
+
 	console.log('loc='+loc);
 
 	var data = {
-		'action': 'isl_ajax_nominatim_query',
-		'find_this': loc
+		'action': 'isl_ajax_geoloc_query',
+		'find_this': loc,
+		'country': country,
+		'max_stores': max_stores,
 	};
 
 //console.log(ajax_object.ajax_url);
@@ -34,23 +71,30 @@ function isl_geo() {
 	jQuery.post(ajax_object.ajax_url, data, function(response) {
 
 		var obj = JSON.parse(response);
+//console.log(obj);
+		if ( (max_stores == 0) && (document.getElementById("isl_lat")) ) {
+			document.getElementById("isl_lat").value = obj.Stores[0].lat;
+			document.getElementById("isl_lng").value = obj.Stores[0].lng;
 
-		var stores_list = '<div class="stores_closest">'+obj.Message;
-		if (obj.Count > 0) {
-			var idx = 0;
-			stores_list = '<div class="stores_closest">';
-			for (idx = 0; idx < obj.Count; idx++) {
-				stores_list += '<div class="store"><button onclick="islFlyTo('+obj.Stores[idx].lat+','+obj.Stores[idx].lng+')"><h5>'+obj.Stores[idx].name+'</h5></button><p class="distance">'+obj.Stores[idx].distance+' kms away</p><p class="addr">'+obj.Stores[idx].addr+'</p><p class="town">'+obj.Stores[idx].town+'</p><p class="phone"><a href="tel:'+obj.Stores[idx].phone+'">'+obj.Stores[idx].phone+'</a></p></div>';
+		} else {
+			var stores_list = '<div class="stores_closest">'+obj.Message;
+			if (obj.Count > 0) {
+				var idx = 0;
+				stores_list = '<div class="stores_closest">';
+				for (idx = 0; idx < obj.Count; idx++) {
+					stores_list += '<div class="store"><button onclick="islFlyTo('+obj.Stores[idx].lat+','+obj.Stores[idx].lng+')"><h5>'+obj.Stores[idx].name+'</h5></button><p class="distance">'+obj.Stores[idx].distance+' kms away</p><p class="addr">'+obj.Stores[idx].addr+'</p><p class="town">'+obj.Stores[idx].town+'</p><p class="phone"><a href="tel:'+obj.Stores[idx].phone+'">'+obj.Stores[idx].phone+'</a></p></div>';
+				}
 			}
+			stores_list += '</div>';
+			
+			document.getElementById("isl_nearest_list").innerHTML = stores_list;
 		}
-		stores_list += '</div>';
-		
-		document.getElementById("isl_nearest_list").innerHTML = stores_list;
 	});
 
-
-	jQuery("#isl_icon_wait").hide();
-	jQuery("#isl_icon_search").show();
+	if (jQuery('#isl_icon_search').length > 0) {
+		jQuery("#isl_icon_wait").hide();
+		jQuery("#isl_icon_search").show();
+	}
 }
 
 function islFlyTo(lat, lng) {
