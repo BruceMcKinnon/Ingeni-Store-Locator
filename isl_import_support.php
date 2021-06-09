@@ -1,6 +1,6 @@
 <?php
 
-class IngeniStoreCsvImport {
+class IngeniStoreCsvImport extends IngeniStoreLocator {
 	private static $instance = null;
 
 	private $debugMode = false;
@@ -168,14 +168,11 @@ class IngeniStoreCsvImport {
 
 		$post_id = -1;
 
-		
-
 		if (array_key_exists('name',$item)) {
 			$content = '';
 			if (array_key_exists('content',$item)) {
 				$content = $item['content'];
 			}
-
 
 			$existingPost = get_page_by_title($item['name'], OBJECT, 'ingeni_storelocator');
 			if ( $existingPost ) {
@@ -198,6 +195,23 @@ class IngeniStoreCsvImport {
 			}
 
 			if( !is_wp_error($post_id) ) {
+
+				if (array_key_exists('category',$item)) {
+					$catName = sanitize_text_field($item['category']);
+					$catID = get_cat_ID( $catName );
+					if ($catID < 1) {
+						$catID = wp_create_category( $catName, 0 );
+					}
+					if ($catID > 0) {
+						wp_set_post_categories( $post_id, array( $catID ) );
+					}
+				}
+
+				if (array_key_exists('tags',$item)) {
+					$tags = sanitize_text_field($item['tags']);
+					wp_set_post_tags( $post_id, $tags );
+				}
+
 
 				if (array_key_exists('address1',$item)) {
 					update_post_meta( $post_id, '_isl_street_address1', sanitize_text_field($item['address1']) );
@@ -229,15 +243,41 @@ class IngeniStoreCsvImport {
 				if (array_key_exists('web',$item)) {
 					update_post_meta( $post_id, '_isl_web', sanitize_url($item['web']) );
 				}
+				$lat = $lng = '';
 				if (array_key_exists('lat',$item)) {
 					if (is_numeric($item['lat'])) {
-						update_post_meta( $post_id, '_isl_lat', $item['lat'] );
+						$lat = $item['lat'];
 					}
 				}
 				if (array_key_exists('lng',$item)) {
 					if (is_numeric($item['lng'])) {
-						update_post_meta( $post_id, '_isl_lng', $item['lng'] );
+						$lng = $item['lng'];
 					}
+				}
+
+				// Bad lat/lng provided - will we try and geolocate now??
+				if ( (!is_numeric($lat)) || (!is_numeric($lng)) ) {
+					$options = get_option( 'ingeni_isl_plugin_options' );
+					$geoloc_import = $options['geoloc_import'];
+
+					if ($geoloc_import) {
+						$find_this = sanitize_text_field($item['address1']).' '.sanitize_text_field($item['address2']).' '.sanitize_text_field($item['town']).' '.sanitize_text_field($item['state']).' '.sanitize_text_field($item['postcode']);
+						$find_country = $item['country'];
+
+						// isl_geolocate_now returns a JSON structure
+						$retInfo = $this->isl_geolocate_now($find_this, $find_country, 0, '','');
+						$jsonInfo = json_decode($retInfo);
+
+						if ($jsonInfo->Count == 1) {
+							$lat = $jsonInfo->Stores[0]->lat;
+							$lng = $jsonInfo->Stores[0]->lng;
+						}
+					}
+				}
+
+				if ( (is_numeric($lat)) && (is_numeric($lng)) ) {
+					update_post_meta( $post_id, '_isl_lat', $lat );
+					update_post_meta( $post_id, '_isl_lng', $lng );
 				}
 
 			} else {

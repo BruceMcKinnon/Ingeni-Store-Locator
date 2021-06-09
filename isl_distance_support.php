@@ -40,7 +40,7 @@ if ( !class_exists( 'IngeniStoreLocatorDistance' ) ) {
 			$distance = rad2deg($distance); 
 			$distance = $distance * 60 * 1.1515;
 
-			$this->debugLog('unit:'.$unit);
+			//$this->debugLog('unit:'.$unit);
 
 			if ( strtolower($unit) == 'km')  { 
 				$distance = $distance * 1.609344; 

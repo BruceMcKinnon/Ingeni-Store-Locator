@@ -5,7 +5,7 @@ Plugin URI: https://github.com/BruceMcKinnon/ingeni-store-locator
 Description: Simple store location with support for OSM and Leaflet maps
 Author: Bruce McKinnon
 Author URI: https://ingeni.net
-Version: 2021.02
+Version: 2021.03
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
@@ -16,23 +16,16 @@ License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 				- Now supports Mapbox and Mapquest (API keys required) in addition to Nominitim
 				- Admin screens now include a Get Lat/Lng button
 				- Major code-refector.
+
+2021.03 - Added support for categories and tags, both via the import and the shortcode.
+				- ingeni_store_locator_shortcode() now uses WP_Query rather than direct SQL call.
+				- implemented default inline svg map markers
+				- Added optional checkboxes for Categories and Tags to the Nearest Search box.
+				- Additional category and tags params for both shortcodes.
+
 */
 
 
-/*
-if (!class_exists('islLatLngPair')) {
-	class islLatLngPair {
-		var $lat = 0;
-		var $lng = 0;
-		//var $title = '';
-
-		public function __construct($lat, $lng) {
-			$this->lat = floatval($lat);
-			$this->lng = floatval($lng);
-		}
-	}
-}
-*/
 
 if ( !class_exists( 'IngeniStoreLocator' ) ) {
 	class IngeniStoreLocator {
@@ -367,7 +360,7 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 					'lat' => '-27.7', // Center of Australia
 					'lng' => '133.7751',
 					'title' => 'Stockists',
-					'pin_icon' => 'images/map-pin.svg',
+					'pin_icon' => '',
 					'pin_color' => '#000000',
 					'zoom' => 4,
 					'store_js_file' => '',
@@ -377,6 +370,8 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 					'clustered' => 1,
 					'pin_width' => 30,
 					'pin_height' => 30,
+					'category' => '',
+					'tags' => '',
 			), $att );
 
 			$idx = 0;
@@ -386,15 +381,33 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 
 			$store_js = 'var addressPoints = [';
 
-			$sql = "SELECT ID, post_title FROM $wpdb->posts WHERE (post_type='ingeni_storelocator')AND(post_status='publish') ";
+			$args = array( 'post_type' => 'ingeni_storelocator', 'post_status' => 'publish', 'posts_per_page' => -1  );
 
-			$results = $wpdb->get_results( $wpdb->prepare( $sql ) );
+			if ( $params['category'] != '') {
+				$args += [ 'category_name' => $params['category'] ];
+			}
+			if ( $params['tags'] != '') {
+				$args += [ 'tag' => $params['tags'] ];
+			}
+			$this->debugLog( 'params:'.print_r($args,true) );
 
-			if ($results) {
+			$store_query = new WP_Query( $args );
 
-					foreach($results as $result) {
-						$_store_name = $result->post_title;
-						$_store_id = $result->ID;
+			if ( $store_query->have_posts() ) {
+
+					while ( $store_query->have_posts() ) {
+						$store_query->the_post();
+
+						$_store_name = get_the_title();
+						$_store_id = get_the_ID();
+
+						$_store_cat = '';
+						$term_obj_list = get_the_terms( $_store_id, 'category' );
+						$_store_category = join(', ', wp_list_pluck($term_obj_list, 'name'));
+						
+						$_store_tags = '';
+						$term_obj_list = get_the_terms( $_store_id, 'post_tag' );
+						$_store_tags = join(', ', wp_list_pluck($term_obj_list, 'name'));
 
 						$_store_lat = get_post_meta( $_store_id, '_isl_lat', true );
 						$_store_lng = get_post_meta( $_store_id, '_isl_lng', true );
@@ -415,6 +428,12 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 							$host = parse_url($_store_web);
 							$info .= '<p><a href=\''.$_store_web.'\' target=\'_blank\'>'.str_ireplace('www.','',$host['host']).'</a></p>';
 						}
+						if ($_store_category) {
+							$info .= '<p class=\'cats\'>'.$_store_category.'</p>';
+						}
+						if ($_store_tags) {
+							$info .= '<p class=\'tags\'>'.$_store_tags.'</p>';
+						}
 						$info .= '</div>"';
 
 						//$info = '"'.$result->ID.'"';
@@ -422,7 +441,7 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 						// Don't include locations with no lat/lng
 						if ( ($_store_lat != '') && ($_store_lng != '') ) {
 							$store_js .= '['.$_store_lat.','.$_store_lng.','.$info.'],'.PHP_EOL;
-						}
+						}  // End While
 					}
 			}
 
@@ -483,10 +502,17 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 				'postalcode' => '',
 				'postcode' => '',
 				'generic' => '',
+				'category' => '',
+				'tags' => '',
+				'max_results' => 5,
+				'show_cats_chkbox' => 0,
+				'show_tags_chkbox' => 0,
+				'cats_title' => 'Categories',
+				'tags_title' => 'Tags',
 			), $atts );
 
 			$retHtml = '';
-
+//$this->debugLog('ingeni_store_locator_nearest_shortcode :'.print_r($address_atts,true));
 			$retHtml .= '<div id="isl_nearest_form">';
 
 			$options = get_option( 'ingeni_isl_plugin_options' );
@@ -495,8 +521,23 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 				$defaultCountry = "Australia";
 			}
 
+			$cats = $this->getTerms('category', $address_atts['category']);
+			$tags = $this->getTerms('post_tag', $address_atts['tags']);
+
+//$this->debugLog('cats :'.$cats);
+//$this->debugLog('tags :'.$tags);
+
+			$max_results = $address_atts['max_results'];
+			
 			$retHtml .= '<p>Type a Postcode or Town:</p>';
-			$retHtml .= '<p><input type="text" id="loc_lookup" name="loc_lookup"><button id="isl_geo_store_search_btn" onclick="isl_geo(\''.$defaultCountry.'\',5)"><div id="isl_icon_search"></div><div id="isl_icon_wait"></div></button></p>';
+			$retHtml .= '<p><input type="text" id="loc_lookup" name="loc_lookup"><button id="isl_geo_store_search_btn" onclick="isl_geo(\''.$defaultCountry.'\','.$max_results.',\''.$cats.'\',\''.$tags.'\')"><div id="isl_icon_search"></div><div id="isl_icon_wait"></div></button></p>';
+
+			if ( ($address_atts['show_cats_chkbox'] > 0) && ( strlen(trim($cats)) > 0 ) ) {
+				$retHtml .= $this->makeCheckboxes('category', trim($cats), 'isl_chkCats', $address_atts['cats_title']);
+			}
+			if ( ($address_atts['show_tags_chkbox'] > 0) && ( strlen(trim($tags)) > 0 ) ) {
+				$retHtml .= $this->makeCheckboxes('post_tag', trim($tags), 'isl_chkTags', $address_atts['tags_title']);
+			}
 			//$retHtml .= '</form>';
 			$retHtml .= '</div>';
 			$retHtml .= '<div id="isl_nearest_list"></div>';
@@ -505,6 +546,66 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 			return $retHtml;
 		}
 
+		private function getTerms( $type, $terms ) {
+			if ( strtolower($terms) == 'all' ) {
+				$list = '';
+				$my_terms = get_terms( array( 'taxonomy' => $type, 'hide_empty' => true ) );
+				$post_idx = 0;
+				foreach( $my_terms as $my_term ) {
+					$num_posts = $this->countPostsInTerm($type, $my_term->name, 'ingeni_storelocator');
+					
+					if ($num_posts > 0) {
+						if ($post_idx > 0) {
+							$list .= ',';
+						}
+						$list .= $my_term->name;
+						$post_idx += 1;
+					}
+
+				}
+				$terms = $list;
+			}
+
+			return $terms;
+		}
+
+		private function countPostsInTerm($taxonomy, $term, $postType = 'post') {
+			$query = new WP_Query([
+					'posts_per_page' => 1,
+					'post_type' => $postType,
+					'post_status' => 'publish',
+					'tax_query' => [
+							[
+								'taxonomy' => $taxonomy,
+								'terms' => $term,
+								'field' => 'name'
+							]
+					]
+			]);
+			return $query->found_posts;
+		}
+
+		private function makeCheckboxes( $type, $list, $div_id, $title ) {
+			$retHtml = '';
+
+			$this->debugLog('makeCheckboxes list:'.$list);
+
+			if ( strlen($list) > 0 ) {
+
+				$items = explode(',',$list);
+				$this->debugLog('items:'.print_r($items,true));
+
+				if (count($items) > 1) {  // Only show checkboxes if more than one tag or category is specified
+					$retHtml = '<div id="'.$div_id.'"><span>'.$title.'</span>';
+
+					foreach( $items as $item ) {
+						$retHtml .= '<label for="'.strtolower($item).'"><input type="checkbox" class="'.$div_id.'" value="'.strtolower($item).'" />'.ucwords($item).'</label>';
+					}
+					$retHtml .= '</div>';
+				}
+			}
+			return $retHtml;
+		}
 
 		public function isl_ajax_geoloc_query() {
 			$this->debugLog( 'Made it into the Ajax function safe and sound!' );
@@ -512,9 +613,24 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 			$find_this = $_POST['find_this'];
 			$find_country = $_POST['country'];
 			$max_stores = $_POST['max_stores'];
+			$tags = $_POST['tags'];
+			$cats = $_POST['cats'];
 
 			$this->debugLog('find_this:'.$find_this);
+			
+			$retInfo = $this->isl_geolocate_now($find_this, $find_country, $max_stores, $cats, $tags);
+
+			$this->debugLog('retInfo:'.$retInfo);
+			echo $retInfo;
+
+			wp_die(); // this is required to terminate immediately and return a proper response
+		}
+
+
+		public function isl_geolocate_now($find_this, $find_country, $max_stores, $cats, $tags) {
 			$retInfo = 'Computer says no!';
+
+			$this->debugLog('isl_geolocate_now:'.$find_this. '  country: >'.$find_country.'<  cats >'.$cats.'<  tags >'.$tags.'<');
 
 			$options = get_option( 'ingeni_isl_plugin_options' );
 			$geoLocService = strtolower( $options['geoloc_service'] );
@@ -529,7 +645,7 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 					$islMapbox = new IngeniStoreLocatorMapbox($this->debugMode);
 				}
 				if ($islMapbox) {
-					$retInfo = $islMapbox->isl_geolocate_query($find_this, $find_country, $max_stores);
+					$retInfo = $islMapbox->isl_geolocate_query($find_this, $find_country, $max_stores, $cats, $tags);
 				}
 				
 			} elseif ($geoLocService == 'mapquest') {
@@ -540,7 +656,7 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 					$islMapquest = new IngeniStoreLocatorMapquest($this->debugMode);
 				}
 				if ($islMapquest) {
-					$retInfo = $islMapquest->isl_geolocate_query($find_this, $find_country, $max_stores);
+					$retInfo = $islMapquest->isl_geolocate_query($find_this, $find_country, $max_stores, $cats, $tags);
 				}
 				
 			} else {
@@ -561,17 +677,14 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 					$this->debugLog('class does not exist!!!!');
 				}
 				if ($islNom) {
-					$retInfo = $islNom->isl_geolocate_query($find_this, $find_country, $max_stores);
+					$retInfo = $islNom->isl_geolocate_query($find_this, $find_country, $max_stores, $cats, $tags);
 
 				} else {
 					$this->debugLog('Could not instantiate IngeniStoreLocatorNominatim');
 				}
 			}
 
-			$this->debugLog('retInfo:'.$retInfo);
-			echo $retInfo;
-
-			wp_die(); // this is required to terminate immediately and return a proper response
+			return $retInfo;
 		}
 
 

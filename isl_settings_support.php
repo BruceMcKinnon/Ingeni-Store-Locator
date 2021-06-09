@@ -70,6 +70,8 @@ class IngeniStoreSettings {
 		add_settings_field( 'ingeni_isl_default_country', 'Default Country', array( &$this, 'ingeni_isl_default_country' ), 'ingeni_isl_plugin', 'isl_general_settings' );
 		add_settings_field( 'ingeni_isl_debug', 'Debug Mode', array( &$this, 'ingeni_isl_debug' ), 'ingeni_isl_plugin', 'isl_general_settings' );
 		add_settings_field( 'ingeni_isl_skip_first_line', 'Skip First Line of Import File', array( &$this, 'ingeni_isl_skip_first_line' ), 'ingeni_isl_plugin', 'isl_general_settings' );
+		
+		add_settings_field( 'ingeni_isl_geoloc_import', 'Geolocate during Import', array( &$this, 'ingeni_isl_geoloc_import' ), 'ingeni_isl_plugin', 'isl_general_settings' );
 
 		add_settings_section( 'isl_geoloc_settings', 'Geolocation Settings', array( &$this, 'ingeni_isl_plugin_section_geoloc_text' ), 'ingeni_isl_plugin' );
 		
@@ -103,6 +105,11 @@ class IngeniStoreSettings {
 	function ingeni_isl_skip_first_line() {
 		$options = get_option( 'ingeni_isl_plugin_options' );
 		echo "<input id='ingeni_isl_skip_first_line' name='ingeni_isl_plugin_options[skip_first_line]' type='checkbox' value='1' " . checked(1, $options['skip_first_line'], false) . " />";
+	}
+
+	function ingeni_isl_geoloc_import() {
+		$options = get_option( 'ingeni_isl_plugin_options' );
+		echo "<input id='ingeni_isl_geoloc_import' name='ingeni_isl_plugin_options[geoloc_import]' type='checkbox' value='1' " . checked(1, $options['geoloc_import'], false) . " />";
 	}
 
 	function ingeni_isl_default_country() {

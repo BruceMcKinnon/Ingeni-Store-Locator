@@ -23,21 +23,30 @@ if ( !class_exists( 'IngeniStoreLocatorMapbox' ) ) {
 			}
 		}
 		
-		private function isl_get_stores() {
+		private function isl_get_stores($max_stores = -1, $cats, $tags) {
 			global $wpdb;
 
 			$stores_list = array();
 
-			$sql = "SELECT ID, post_title FROM $wpdb->posts WHERE (post_type='ingeni_storelocator')AND(post_status='publish') ";
-			$this->debugLog('sql:'.$sql);
+			$args = array( 'post_type' => 'ingeni_storelocator', 'post_status' => 'publish', 'posts_per_page' => intval($max_stores) );
 
-			$results = $wpdb->get_results( $wpdb->prepare( $sql ) );
-	
-			if ($results) {
-				foreach($results as $result) {
+			if ( $cats != '') {
+				$args += [ 'category_name' => $cats ];
+			}
+			if ( $tags != '') {
+				$args += [ 'tag' => $tags ];
+			}
+			$this->debugLog( 'isl_get_stores params:'.print_r($args,true) );
 
-					$_store_id = $result->ID;
-					$_store_name = $result->post_title;
+			$store_query = new WP_Query( $args );
+
+			if ( $store_query->have_posts() ) {
+
+				while ( $store_query->have_posts() ) {
+					$store_query->the_post();
+
+					$_store_name = get_the_title();
+					$_store_id = get_the_ID();
 					$_store_lat = get_post_meta( $_store_id, '_isl_lat', true );
 					$_store_lng = get_post_meta( $_store_id, '_isl_lng', true );
 					$_store_addr = trim(get_post_meta( $_store_id, '_isl_street_address1', true ) . ' ' . get_post_meta( $_store_id, '_isl_street_address2', true ) );
@@ -45,7 +54,7 @@ if ( !class_exists( 'IngeniStoreLocatorMapbox' ) ) {
 					$_store_phone = get_post_meta( $_store_id, '_isl_phone1', true );
 
 					array_push( $stores_list, array('id' => $_store_id, 'lat' => $_store_lat, 'lng' => $_store_lng, 'name' => $_store_name, 'addr' => $_store_addr, 'town' => $_store_town, 'phone' => $_store_phone, 'distance' => 0) );
-				}
+				} // End while
 			}
 			$this->debugLog("stores_list:".print_r($stores_list,true));
 			return $stores_list;
@@ -53,10 +62,10 @@ if ( !class_exists( 'IngeniStoreLocatorMapbox' ) ) {
 
 
 
-		public function isl_geolocate_query($find_this, $country, $max_stores = 5) {
+		public function isl_geolocate_query($find_this, $country, $max_stores = 5, $cats, $tags) {
 			global $wpdb;
 
-			$this->debugLog('isl_geolocate_query:'.$find_this. '  country: >'.$country.'<');
+			$this->debugLog('isl_geolocate_query:'.$find_this. '  country: >'.$country.'<  cats >'.$cats.'<  tags >'.$tags.'<');
 
 			$retInfo = array('Message' => 'Nothing Found', 'Count' => 0);
 
@@ -88,10 +97,12 @@ if ( !class_exists( 'IngeniStoreLocatorMapbox' ) ) {
 
 					if ( ($location_lat + $location_lng) > 0 ) {
 						$my_stores = array();
-						$my_stores = $this->isl_get_stores();
+						$my_stores = $this->isl_get_stores(-1,$cats,$tags);
+
 						if ($my_stores) {
 							$idx = 0;
 							$store_count = count($my_stores);
+							
 							for ( $idx = 0; $idx < $store_count; ++$idx ) {
 								$my_stores[$idx]['distance'] = $islDistance->isl_getDistanceBetweenPoints( floatval($my_stores[$idx]['lat']), floatval($my_stores[$idx]['lng']), $location_lat, $location_lng, 'km');
 							}

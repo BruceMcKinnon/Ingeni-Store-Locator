@@ -41,7 +41,9 @@ if ( !class_exists( 'IngeniStoreLocatorMaps' ) ) {
 
 		private function remoteFileExists( $filename ) {
 			$exists = false;
+
 			if ( $filename != '') {
+				$this->debugLog('remoteFileExists: filename:'.$filename );
 				try {
 					$ch = curl_init($filename);
 					//curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -73,7 +75,7 @@ if ( !class_exists( 'IngeniStoreLocatorMaps' ) ) {
 						'lat' => '-27.7', // Center of Australia
 						'lng' => '133.7751',
 						'title' => 'Stockists',
-						'pin_icon' => 'images/map-pin.svg',
+						'pin_icon' => '',
 						'pin_color' => '#000000',
 						'zoom' => 5,
 						'store_js_file' => '',
@@ -86,6 +88,7 @@ if ( !class_exists( 'IngeniStoreLocatorMaps' ) ) {
 						'pin_height' => 30,
 				), $atts );
 
+			$this->debugLog( 'isl_show_open_street_cluster_map map_atts:'.print_r($map_atts,true) );
 
 			$width = $map_atts['minwidth'];
 			$height = $map_atts['minheight'];
@@ -104,10 +107,10 @@ if ( !class_exists( 'IngeniStoreLocatorMaps' ) ) {
 			$pin_height = $map_atts['pin_height'];
 
 			if ( !$this->remoteFileExists( $pin_icon ) ) {
-
 				if ( file_exists( plugin_dir_path( __FILE__ ).$pin_icon ) ) {
-					$pin_icon = plugin_dir_url( __FILE__ ).$pin_icon;
-
+					if ( is_file(plugin_dir_path( __FILE__ ).$pin_icon) ) {
+						$pin_icon = plugin_dir_url( __FILE__ ).$pin_icon;
+					}
 				} else {
 					$pin_icon = '';
 				}
@@ -115,11 +118,12 @@ if ( !class_exists( 'IngeniStoreLocatorMaps' ) ) {
 
 			$pin_data = '';
 			if ( $this->endsWith($pin_icon,'.svg') ) {
+
 				$ch_svg = curl_init();
+				curl_setopt($ch_svg, CURLOPT_HEADER, 0);
 				curl_setopt($ch_svg, CURLOPT_URL, $pin_icon);
 				curl_setopt($ch_svg, CURLOPT_RETURNTRANSFER, true);
-				curl_setopt($ch_svg, CURLOPT_HEADER, false);
-				curl_setopt($ch_svg, CURLOPT_REFERER, $_SERVER['REQUEST_URI']);
+
 				$pin_data = curl_exec($ch_svg);
 				curl_close($ch_svg);
 			}
@@ -250,14 +254,13 @@ if ( !class_exists( 'IngeniStoreLocatorMaps' ) ) {
 									});
 
 							} else {
-								pin = {
-									path: "m 768,896 q 0,106 -75,181 -75,75 -181,75 -106,0 -181,-75 -75,-75 -75,-181 0,-106 75,-181 75,-75 181,-75 106,0 181,75 75,75 75,181 z m 256,0 q 0,-109 -33,-179 L 627,-57 q -16,-33 -47.5,-52 -31.5,-19 -67.5,-19 -36,0 -67.5,19 Q 413,-90 398,-57 L 33,717 Q 0,787 0,896 q 0,212 150,362 150,150 362,150 212,0 362,-150 150,-150 150,-362 z",
-									fillColor: pin_color,
-									fillOpacity: 1,
-									strokeWeight: 0,
-									scale: 0.03,
-									rotation: 180
+								const size = 15;
+								const iconOptions = {
+									iconSize:[pin_width,pin_height],
+									class : 'map_pin',
+									html : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 365 560"><path d="M182.9,551.7c0,0.1,0.2,0.3,0.2,0.3S358.3,283,358.3,194.6c0-130.1-88.8-186.7-175.4-186.9C96.3,7.9,7.5,64.5,7.5,194.6c0,88.4,175.3,357.4,175.3,357.4S182.9,551.7,182.9,551.7z M122.2,187.2c0-33.6,27.2-60.8,60.8-60.8c33.6,0,60.8,27.2,60.8,60.8S216.5,248,182.9,248C149.4,248,122.2,220.8,122.2,187.2z"/></svg>'
 								}
+								var pin = L.divIcon(iconOptions);
 							}
 		
 							if (clustered) {
@@ -268,10 +271,9 @@ if ( !class_exists( 'IngeniStoreLocatorMaps' ) ) {
 									var a = addressPoints[i];
 									var title = a[2];
 
-									var marker = L.marker(new L.LatLng( a[0], a[1] ), { title: title, icon: pin });
+									var marker = L.marker(new L.LatLng( a[0], a[1] ), { icon: pin } );
 									marker.bindPopup(title);
 									markers.addLayer(marker);
-									
 								}
 
 								isl_map.addLayer(markers);
@@ -282,11 +284,10 @@ if ( !class_exists( 'IngeniStoreLocatorMaps' ) ) {
 									var a = addressPoints[i];
 									var title = a[2];
 
-									var marker = L.marker(new L.LatLng( a[0], a[1] ), { title: title, icon: pin });
+									var marker = L.marker(new L.LatLng( a[0], a[1] ), { icon: pin });
 									marker.bindPopup(title);
 									isl_map.addLayer(marker);
 								}
-
 							}
 
 							// Center map - cannot be positioned at 'Null Island' !!

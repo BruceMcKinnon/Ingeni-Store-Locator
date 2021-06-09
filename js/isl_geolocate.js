@@ -19,7 +19,7 @@ jQuery( document ).ready(function() {
 });
 
 
-function isl_geo(country, max_stores) { 
+function isl_geo(country, max_stores, cats, tags) { 
 	if (jQuery('#isl_icon_search').length > 0) {
 		jQuery("#isl_icon_search").hide();
 		jQuery("#isl_icon_wait").show();
@@ -57,6 +57,34 @@ function isl_geo(country, max_stores) {
 		}
 	}
 
+	if (jQuery('#isl_chkCats').length > 0) {
+		// Only check of the checkboxes are displayed
+		cats = '';
+
+		jQuery('.isl_chkCats:checkbox:checked').each(function () {
+			cats += (this.checked ? jQuery(this).val()+"," : "");
+		});
+		
+		if (cats.endsWith(",")) {
+			cats = cats.substring(0, cats.length-1);
+		}
+	}
+	console.log('cats='+cats);
+
+	if (jQuery('#isl_chkTags').length > 0) {
+		// Only check of the checkboxes are displayed
+		tags = '';
+
+		jQuery('.isl_chkTags:checkbox:checked').each(function () {
+			tags = (this.checked ? jQuery(this).val()+"," : "");
+		});
+		
+		if (tags.endsWith(",")) {
+			tags = tags.substring(0, tags.length-1);
+		}
+	}
+	console.log('tags='+tags);
+
 	console.log('loc='+loc);
 
 	var data = {
@@ -64,6 +92,8 @@ function isl_geo(country, max_stores) {
 		'find_this': loc,
 		'country': country,
 		'max_stores': max_stores,
+		'cats': cats,
+		'tags': tags,
 	};
 
 //console.log(ajax_object.ajax_url);
