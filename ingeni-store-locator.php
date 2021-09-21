@@ -5,7 +5,7 @@ Plugin URI: https://github.com/BruceMcKinnon/ingeni-store-locator
 Description: Simple store location with support for OSM and Leaflet maps
 Author: Bruce McKinnon
 Author URI: https://ingeni.net
-Version: 2021.03
+Version: 2021.04
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
@@ -23,6 +23,9 @@ License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 				- Added optional checkboxes for Categories and Tags to the Nearest Search box.
 				- Additional category and tags params for both shortcodes.
 
+2021.04 - Added the Export to CSV option
+		- Import now supports an ID field; removes reliance on matching the store name
+		- Import now provides for adding the town name as part of the store name, if there are duplicated store names.
 */
 
 
@@ -48,8 +51,10 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 			$this->debugMode = false;
 			$options = get_option( 'ingeni_isl_plugin_options' );
 
-			if ( $options['debug'] ) {
-				$this->debugMode = true;
+			if (array_key_exists('debug', $options)) {
+				if ( $options['debug'] ) {
+					$this->debugMode = true;
+				}
 			}
 
 
@@ -108,7 +113,9 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 		function deactivate() {
 				flush_rewrite_rules();
 		}
-
+		static function uninstall() {
+			//
+		}
 
 		public function cpt_init() {
 
@@ -721,6 +728,6 @@ if (class_exists('IngeniStoreLocator')) {
 
 register_activation_hook(__FILE__, array($storeLocator, 'activate'));
 register_deactivation_hook(__FILE__, array($storeLocator, 'deactivate'));
-register_uninstall_hook(__FILE__, array($storeLocator, 'uninstall'));
+//register_uninstall_hook(__FILE__, array($storeLocator, 'uninstall'));
 
 ?>

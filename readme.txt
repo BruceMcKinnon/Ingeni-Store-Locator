@@ -4,7 +4,7 @@ Contributors: Bruce McKinnon
 Tags: content, receipties
 Requires at least: 5.0
 Tested up to: 5.7
-Stable tag: 2021.03
+Stable tag: 2021.04
 
 A Store locator with map and freeform location lookup (for finding stores closest to a location), and bulk import.
 
@@ -132,4 +132,8 @@ For example:
 				- implemented default inline svg map markers
 				- Added optional checkboxes for Categories and Tags to the Nearest Search box.
 				- Additional category and tags params for both shortcodes.
+
+2021.04 - Added the Export to CSV option
+		- Import now supports an ID field; removes reliance on matching the store name
+		- Import now provides for adding the town name as part of the store name, if there are duplicated store names.
 

@@ -5,10 +5,13 @@ class IngeniStoreCsvImport extends IngeniStoreLocator {
 
 	private $debugMode = false;
 
+	private $default_header_row = "name,address1,address2,town,state,postcode,country,lat,lng,phone1,phone2,email,website,category,tags,published,id";
+
 	private function __construct( $debugOn = false ) {
 		$this->debugMode = $debugOn;
 
 		include_once(plugin_dir_path( __FILE__ ).'isl_util.php');
+		include_once(plugin_dir_path( __FILE__ ).'isl_export_support.php');
 
 		$this->debugLog('IngeniStoreCsvImport constructed');
 
@@ -32,6 +35,10 @@ class IngeniStoreCsvImport extends IngeniStoreLocator {
 		if ($islUtil) {
 			$islUtil->debugLog($msg);
 		}
+	}
+
+	public function defaultHeaderRow() {
+		return $this->defaultHeaderRow;
 	}
 
 
@@ -80,6 +87,14 @@ class IngeniStoreCsvImport extends IngeniStoreLocator {
 
 				break;
 
+				case "Export to CSV":
+					if (class_exists('IngeniStoreCsvExport')) {
+						$islExport = new IngeniStoreCsvExport( $this->debugMode );
+					}
+					$islExport->isl_download_export();
+
+				break;
+
 			}
 		}
 	
@@ -95,6 +110,7 @@ class IngeniStoreCsvImport extends IngeniStoreLocator {
 				echo('</tbody></table>');
 				
 				echo('<div class="submit_wrap"><input type="submit" name="submit" id="submit" class="button button-primary" value="Import Now">');
+				echo('<div class="submit_wrap"><input type="submit" name="submit" id="export" class="button button-primary" value="Export to CSV">');
 				echo('<div id="loading_anim"><div class="centered"><div class="blob-1"></div><div class="blob-2"></div></div></div></div>');
 			echo('</form>');
 
@@ -118,7 +134,9 @@ class IngeniStoreCsvImport extends IngeniStoreLocator {
 			$allowedTypes = array("csv");
 			$zip_path = "";
 
-			$this->debugLog('isl_upload_import: '. $selected_file.' | ' .$tmp_file.' | ' .$size);
+
+
+			$this->debugLog('isl_upload_import: '. $selected_file.' | ' .$tmp_file.' | ' .$size.' | ' .$skip_header_row);
 
 			if ( $this->isl_upload_to_server( $selected_file, $tmp_file, $fileSize, $allowedTypes, $errMsg, $zip_path )  == 0 ) {
 				$this->debugLog( 'upload err: '.$errMsg );
@@ -128,7 +146,7 @@ class IngeniStoreCsvImport extends IngeniStoreLocator {
 			}
 
 			if ( !file_exists($uploadedFile) ) {
-					throw new Exception("Import file does not exist!");
+				throw new Exception("Import file does not exist!");
 			}
 
 
@@ -141,9 +159,8 @@ class IngeniStoreCsvImport extends IngeniStoreLocator {
 			//
 			// The file is uploaded, so now extract the data and save it
 			//
-
 			$items = $this->isl_csv_to_array($uploadedFile, $skip_header_row);
-
+			
 			if ($items) {
 				foreach ($items as $item) {
 					if ( $this->isl_save_item($item) > 0) {
@@ -162,19 +179,91 @@ class IngeniStoreCsvImport extends IngeniStoreLocator {
 		return $importCount;
 	}
 
+	function isl_get_post_title_count($post_title) {
+		$count = 0;
+
+		$args = array(
+			'post_type' => 'ingeni_storelocator',
+			'post_status' => array( 'publish' ),
+			'posts_per_page' => -1,
+			'post_title' => $post_title,
+		);
+		$stores = new WP_Query( $args );
+		if ( $stores->have_posts() ) {
+			$count = $stores->post_count();
+		}
+
+		wp_reset_postdata();
+
+		return $count;
+	}
 
 	function isl_save_item($item) {
 		$this->debugLog(print_r($item,true));
 
+		setlocale(LC_ALL, "en_AU");
+
+
 		$post_id = -1;
 
-		if (array_key_exists('name',$item)) {
+
+		$exists = array_key_exists("name",$item);
+/*
+ob_start();
+var_dump($exists);
+$dumpit = ob_get_clean();
+$this->debugLog('dumpit:'.print_r($dumpit,true));
+*/
+
+		if ($exists !== true) {
+			$this->debugLog('Name key does not exist');
+
+			$keys = array_keys($item);
+			$this->debugLog(print_r($keys,true));
+
+			foreach( $keys as $key ) {
+				$key = trim(strval($key));
+				$this->debugLog('testing for name key:>'.$key.'<');
+				if ( strcasecmp( $key == "name") == 0 ) {
+					$this->debugLog('name key is true');
+					$exists = true;
+					break;
+				}
+			}
+
+
+		}
+		
+		if ($exists) {
 			$content = '';
 			if (array_key_exists('content',$item)) {
 				$content = $item['content'];
 			}
+			$post_status = 'publish';
+			if (array_key_exists('published',$item)) {
+				$post_status = $item['published'];
+			}
 
-			$existingPost = get_page_by_title($item['name'], OBJECT, 'ingeni_storelocator');
+			$post_id = -1;
+			if (array_key_exists('id',$item) ) {
+				$post_id = intval($item['id']);
+				$this->debugLog('isl_save_item exsiting post_id:'.$post_id);
+			}
+
+
+			// If a post ID is provided, then do a direct lookup, otherwise lookup the port title.
+			if ($post_id > 0) {
+				$existingPost = get_post($item['id'], OBJECT, 'ingeni_storelocator');
+			} else {
+				// If doing a post title lookup, make sure the title is unique by adding the town name
+				$post_count = $this->isl_get_post_title_count($item['name']);
+				if ($post_count > 0) {
+					$item['name'] = $item['name'] . ' ' . $item['town'];
+				}
+
+				$existingPost = get_page_by_title($item['name'], OBJECT, 'ingeni_storelocator');
+			}
+
 			if ( $existingPost ) {
 				$post_id = $existingPost->ID;
 				
@@ -183,15 +272,21 @@ class IngeniStoreCsvImport extends IngeniStoreLocator {
 				$newPost = array(
 					'post_title' => $item['name'],
 					'post_content' => $content,
-					'post_status' => 'publish',
+					'post_status' => $post_status,
 					'post_type' => 'ingeni_storelocator'
 				);
 				
 				// Insert the post into the database
-				$err = 0;
+				$err = false;
 				$post_id = wp_insert_post( $newPost, $err);
+				
+				if ($post_id == 0) {
+					$this->debugLog('isl_save_item ERR:'.print_r($err,true));
+				} else {
+					$this->debugLog('isl_save_item new:'.$post_id);
+				}
 
-				$this->debugLog('isl_save_item new:'.$post_id);
+				
 			}
 
 			if( !is_wp_error($post_id) ) {
@@ -289,7 +384,7 @@ class IngeniStoreCsvImport extends IngeniStoreLocator {
 			$this->debugLog('isl_save_item: No name provided!');
 		}
 
-		$this->debugLog('isl_save_item='.$post_id);
+		$this->debugLog('isl_save_item post_id='.$post_id);
 		return $post_id;
 	}
 
@@ -403,26 +498,50 @@ class IngeniStoreCsvImport extends IngeniStoreLocator {
 	 * @copyright Copyright (c) 2010, Jay Williams
 	 * @license http://www.opensource.org/licenses/mit-license.php MIT License
 	 */
-	function isl_csv_to_array($filename='', $skip_header_row=false, $delimiter=',') {
-		if(!file_exists($filename) || !is_readable($filename))
+	function isl_csv_to_array($filename='', $skip_header_row=0, $delimiter=',') {
+
+		$this->debugLog('isl_csv_to_array:'.$filename. ' skip_header:'.$skip_header_row.' delimiter:'.$delimiter);
+
+
+		if( !file_exists($filename) || !is_readable($filename) ) {
 			return FALSE;
-		
-		$this->debugLog('isl_csv_to_array:'.$filename);
+		}
+	
 		$header = NULL;
 		$data = array();
+
+		if ($skip_header_row == 0) {
+			$header = explode(',', $this->defaultHeaderRow);
+		}
+
+		setlocale(LC_ALL, 'en_AU');
+
 		if (($handle = fopen($filename, 'r')) !== FALSE) {
 			while (($row = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
-				if ( $skip_header_row ) {
-					$header = $row;
-					$skip_header_row = false;
+				$this->debugLog('isl_csv_to_array:'.print_r($row,true));
+				//$row = array_map("utf8_encode", $row); // extra encoding handling
+				if ( !$header ) {
+					//$this->debugLog('isl_csv_to_array: setting this row to be the header');
+					$header = array_map('trim', $row);
+					$this->debugLog('isl_csv_to_array header[]:'.print_r($header,true));
 				} else {
 					$data[] = array_combine($header, $row);
+					$skip_header_row = 1;
 				}
 			}
 			fclose($handle);
+			//$this->debugLog('isl_csv_to_array data[]:'.print_r($data,true));
 		} else {
 			$this->debugLog('isl_csv_to_array - could not open:'.$filename);
 		}
+
+		if ( array_key_exists('name',$data[0]) ) {
+			$this->debugLog('isl_csv_to_array name exists');
+		} else {
+			$this->debugLog('isl_csv_to_array name does not exist.');
+		}
+
+		//$this->debugLog('isl_csv_to_array:'.print_r($data,true));
 		return $data;
 	}
 

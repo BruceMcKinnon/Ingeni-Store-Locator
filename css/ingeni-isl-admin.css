@@ -135,6 +135,7 @@ table.isl-importer td {
 .submit_wrap .button-primary {
 	float: left;
 	margin-top: 10px;
+	margin-right: 10px;
 }
 #loading_anim {
 	display: none;
