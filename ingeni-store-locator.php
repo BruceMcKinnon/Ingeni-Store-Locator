@@ -5,7 +5,7 @@ Plugin URI: https://github.com/BruceMcKinnon/ingeni-store-locator
 Description: Simple store location with support for OSM and Leaflet maps
 Author: Bruce McKinnon
 Author URI: https://ingeni.net
-Version: 2021.04
+Version: 2022.01
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
@@ -26,6 +26,12 @@ License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 2021.04 - Added the Export to CSV option
 		- Import now supports an ID field; removes reliance on matching the store name
 		- Import now provides for adding the town name as part of the store name, if there are duplicated store names.
+
+2022.01 - isl_settings_support() - Improved checking of non-existant values when using the Wordpress checked() function 
+		- isl_map_support() - Removed logging of redundant json values.
+		- isl_content_save() - Fixed bug to save Addr2 correctly.
+		- Updated the Nearest Search box to return a store web URL (if available).
+
 */
 
 
@@ -287,12 +293,15 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 		public function isl_content_save( $post_id ) {
 
 			if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) 
-			return;
+				return;
+
 
 			if ( !wp_verify_nonce( $_POST['isl_street_address1_nonce'], plugin_basename( __FILE__ ) ) ) {
 				$this->debugLog('isl_content_save: bad nonce');
 				return;
 			}
+
+
 
 
 			// Check the user's permissions.
@@ -317,7 +326,7 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 			$new = sanitize_text_field( $_POST['isl_street_address1'], '');
 			update_post_meta( $post_id, '_isl_street_address1', $new );
 
-			$new = sanitize_text_field( $_POST['street_address2'], '');
+			$new = sanitize_text_field( $_POST['isl_street_address2'], '');
 			update_post_meta( $post_id, '_isl_street_address2', $new );
 
 			$new = sanitize_text_field( $_POST['isl_town'], '');

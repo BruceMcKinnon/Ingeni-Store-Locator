@@ -66,8 +66,9 @@ if ( !class_exists( 'IngeniStoreLocatorMapquest' ) ) {
 					$_store_addr = trim(get_post_meta( $_store_id, '_isl_street_address1', true ) . ' ' . get_post_meta( $_store_id, '_isl_street_address2', true ) );
 					$_store_town = trim( get_post_meta( $_store_id, '_isl_town', true ) . ' ' . get_post_meta( $_store_id, '_isl_state', true ) . ' ' . get_post_meta( $_store_id, '_isl_postcode', true ) );
 					$_store_phone = get_post_meta( $_store_id, '_isl_phone1', true );
+					$_store_web = get_post_meta( $_store_id, '_isl_web', true );
 
-					array_push( $stores_list, array('id' => $_store_id, 'lat' => $_store_lat, 'lng' => $_store_lng, 'name' => $_store_name, 'addr' => $_store_addr, 'town' => $_store_town, 'phone' => $_store_phone, 'distance' => 0) );
+					array_push( $stores_list, array('id' => $_store_id, 'lat' => $_store_lat, 'lng' => $_store_lng, 'name' => $_store_name, 'addr' => $_store_addr, 'town' => $_store_town, 'phone' => $_store_phone, 'web' => $_store_web, 'distance' => 0) );
 				} // End while
 			}
 			$this->debugLog("stores_list:".print_r($stores_list,true));

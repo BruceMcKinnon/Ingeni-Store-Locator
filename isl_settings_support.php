@@ -90,6 +90,16 @@ class IngeniStoreSettings {
 		return $input;
 	}
 
+	function is_checked( array $the_array, string $the_key ) {
+		$dummy = false;
+		$retVal = '';
+
+		if ( array_key_exists($the_key, $the_array) ) {
+			$retVal = checked( 1, $the_array[$the_key], false );
+		}
+
+		return $retVal;
+	}
 
 	function ingeni_isl_plugin_section_general_text() {
 		echo '<p>General Settings</p>';
@@ -99,17 +109,17 @@ class IngeniStoreSettings {
 	}
 	function ingeni_isl_debug() {
 		$options = get_option( 'ingeni_isl_plugin_options' );
-		echo "<input id='ingeni_isl_debug' name='ingeni_isl_plugin_options[debug]' type='checkbox' value='1' " . checked(1, $options['debug'], false) . " />";
+		echo "<input id='ingeni_isl_debug' name='ingeni_isl_plugin_options[debug]' type='checkbox' value='1' " . $this->is_checked($options, 'debug') . " />";
 	}
 
 	function ingeni_isl_skip_first_line() {
 		$options = get_option( 'ingeni_isl_plugin_options' );
-		echo "<input id='ingeni_isl_skip_first_line' name='ingeni_isl_plugin_options[skip_first_line]' type='checkbox' value='1' " . checked(1, $options['skip_first_line'], false) . " />";
+		echo "<input id='ingeni_isl_skip_first_line' name='ingeni_isl_plugin_options[skip_first_line]' type='checkbox' value='1' " . $this->is_checked($options, 'skip_first_line') . " />";
 	}
 
 	function ingeni_isl_geoloc_import() {
 		$options = get_option( 'ingeni_isl_plugin_options' );
-		echo "<input id='ingeni_isl_geoloc_import' name='ingeni_isl_plugin_options[geoloc_import]' type='checkbox' value='1' " . checked(1, $options['geoloc_import'], false) . " />";
+		echo "<input id='ingeni_isl_geoloc_import' name='ingeni_isl_plugin_options[geoloc_import]' type='checkbox' value='1' " . $this->is_checked($options, 'geoloc_import') . " />";
 	}
 
 	function ingeni_isl_default_country() {

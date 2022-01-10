@@ -4,7 +4,7 @@ Contributors: Bruce McKinnon
 Tags: content, receipties
 Requires at least: 5.0
 Tested up to: 5.7
-Stable tag: 2021.04
+Stable tag: 2022.01
 
 A Store locator with map and freeform location lookup (for finding stores closest to a location), and bulk import.
 
@@ -136,4 +136,10 @@ For example:
 2021.04 - Added the Export to CSV option
 		- Import now supports an ID field; removes reliance on matching the store name
 		- Import now provides for adding the town name as part of the store name, if there are duplicated store names.
+
+2022.01 - isl_settings_support() - Improved checking of non-existant values when using the Wordpress checked() function 
+	- isl_map_support() - Removed logging of redundant json values.
+	- isl_content_save() - Fixed bug to save Addr2 correctly.
+	- Updated the Nearest Search box to return a store web URL (if available).
+
 

@@ -112,7 +112,14 @@ function isl_geo(country, max_stores, cats, tags) {
 				var idx = 0;
 				stores_list = '<div class="stores_closest">';
 				for (idx = 0; idx < obj.Count; idx++) {
-					stores_list += '<div class="store"><button onclick="islFlyTo('+obj.Stores[idx].lat+','+obj.Stores[idx].lng+')"><h5>'+obj.Stores[idx].name+'</h5></button><p class="distance">'+obj.Stores[idx].distance+' kms away</p><p class="addr">'+obj.Stores[idx].addr+'</p><p class="town">'+obj.Stores[idx].town+'</p><p class="phone"><a href="tel:'+obj.Stores[idx].phone+'">'+obj.Stores[idx].phone+'</a></p></div>';
+					stores_list += '<div class="store"><button onclick="islFlyTo('+obj.Stores[idx].lat+','+obj.Stores[idx].lng+')"><h5>'+obj.Stores[idx].name+'</h5></button><p class="distance">'+obj.Stores[idx].distance+' kms away</p><p class="addr">'+obj.Stores[idx].addr+'</p><p class="town">'+obj.Stores[idx].town+'</p>';
+					
+					var web_url = obj.Stores[idx].web;
+					if (web_url) {
+						stores_list += '<p class="web"><a href="'+web_url+'" target="_blank">'+web_url+'</a></p>';
+					}
+
+					stores_list += '<p class="phone"><a href="tel:'+obj.Stores[idx].phone+'">'+obj.Stores[idx].phone+'</a></p></div>';
 				}
 			}
 			stores_list += '</div>';

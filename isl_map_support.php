@@ -144,7 +144,7 @@ if ( !class_exists( 'IngeniStoreLocatorMaps' ) ) {
 			}
 			
 			$this->debugLog('latlng:'.print_r($lat_lng_pairs,true));
-			$this->debugLog('json encode:'.$json_latlng);
+
 
 			// Enqueue the map clusterer plugin
 			if ($clustered != 0) {
