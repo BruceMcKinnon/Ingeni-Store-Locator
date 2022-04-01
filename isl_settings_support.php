@@ -63,6 +63,7 @@ class IngeniStoreSettings {
 
 
 	function ingeni_isl_register_settings() {
+		
 		register_setting( 'ingeni_isl_plugin_options', 'ingeni_isl_plugin_options', array( &$this, 'ingeni_isl_plugin_options_validate') );
 
 		add_settings_section( 'isl_general_settings', 'General Settings', array( &$this, 'ingeni_isl_plugin_section_general_text' ), 'ingeni_isl_plugin' );

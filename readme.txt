@@ -4,7 +4,7 @@ Contributors: Bruce McKinnon
 Tags: content, receipties
 Requires at least: 5.0
 Tested up to: 5.7
-Stable tag: 2022.01
+Stable tag: 2022.02
 
 A Store locator with map and freeform location lookup (for finding stores closest to a location), and bulk import.
 
@@ -117,6 +117,29 @@ For example:
 
 
 
+== How do I show a list of all of the Stores? ==
+
+Use the [ingeni-store-list] shortcode.
+
+Parameters:
+
+parent_cat = Category to display. Leave blank to display all categories.
+
+orderby = Which post field to order by. Standard wp_query(). Defaults to 'name'.
+
+order = Which ordering to use. Standard wp_query(). Defaults to 'asc'.
+
+class = Specify a wrapper class for the list. Defaults to 'stores_list'.
+
+store_class = Specify a class for each store listing. Defaults to 'store_listing'.
+
+
+For example: [ingeni-store-list parent_cat="suppliers"]
+
+
+
+
+
 
 == Changelog ==
 
@@ -142,4 +165,7 @@ For example:
 	- isl_content_save() - Fixed bug to save Addr2 correctly.
 	- Updated the Nearest Search box to return a store web URL (if available).
 
-
+2022.02 - IngeniStoreLocator() - Create and save an options key if ones does not exist (e.g., first-time install).
+	- Added support for Contact Name
+	- Fixed an unclosed row error in isl_add_meta_boxes();
+	- Added [ingeni-store-list] for displaying an ajax enabled list of stores

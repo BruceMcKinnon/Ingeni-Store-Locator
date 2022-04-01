@@ -326,6 +326,9 @@ $this->debugLog('dumpit:'.print_r($dumpit,true));
 				if (array_key_exists('country',$item)) {
 					update_post_meta( $post_id, '_isl_country', sanitize_text_field($item['country']) );
 				}
+				if (array_key_exists('contact_name',$item)) {
+					update_post_meta( $post_id, '_isl_contact_name', sanitize_text_field($item['contact_name']) );
+				}
 				if (array_key_exists('phone1',$item)) {
 					update_post_meta( $post_id, '_isl_phone1', sanitize_text_field($item['phone1']) );
 				}

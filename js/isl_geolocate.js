@@ -16,6 +16,13 @@ jQuery( document ).ready(function() {
 			}
 		});
 	}
+
+	// Make the dropdown auto-select
+	var store_dropdown = document.getElementById('store_cat_lookup');
+	if (store_dropdown) {
+		store_dropdown.onchange();
+	}
+	
 });
 
 
@@ -140,4 +147,36 @@ function islFlyTo(lat, lng) {
 	} else {
 		isl_map.flyTo([lat, lng],12);
 	}
+}
+
+
+
+
+
+
+function isl_get_stores_by_cat() { 
+
+	var cat = '';
+	var extra_data = '';
+
+	if (jQuery('#store_cat_lookup').length > 0) {
+		cat = document.getElementById('store_cat_lookup').value;
+	}
+
+	console.log('cat='+cat);
+
+	var data = {
+		'action': 'isl_ajax_list_stores',
+		'find_this': cat,
+	};
+
+//console.log(ajax_object.ajax_url);
+//console.log(data);
+	jQuery.post(ajax_object.ajax_url, data, function(response) {
+		var obj = JSON.parse(response);
+		var stores_list = obj.html;
+		
+		document.getElementById("isl_store_list").innerHTML = stores_list;
+	});
+
 }

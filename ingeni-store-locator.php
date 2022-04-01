@@ -5,7 +5,7 @@ Plugin URI: https://github.com/BruceMcKinnon/ingeni-store-locator
 Description: Simple store location with support for OSM and Leaflet maps
 Author: Bruce McKinnon
 Author URI: https://ingeni.net
-Version: 2022.01
+Version: 2022.02
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
@@ -32,6 +32,11 @@ License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 		- isl_content_save() - Fixed bug to save Addr2 correctly.
 		- Updated the Nearest Search box to return a store web URL (if available).
 
+2022.02 - IngeniStoreLocator() - Create and save an options key if ones does not exist (e.g., first-time install).
+		- Added support for Contact Name
+		- Fixed an unclosed row error in isl_add_meta_boxes();
+		- Added [ingeni-store-list] for displaying an ajax enabled list of stores
+		
 */
 
 
@@ -57,6 +62,19 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 			$this->debugMode = false;
 			$options = get_option( 'ingeni_isl_plugin_options' );
 
+			
+			if ( !is_array( $options ) ) {
+				$options = array(
+					'debug' => false,
+					'default_country' => 'Australia',
+					'geoloc_service' => '',
+					'skip_first_line' => 0,
+					'geoloc_import' => 0,
+					'mapbox_api_key' => '',
+					'mapquest_api_key' => '',
+				);
+				update_option( 'ingeni_isl_plugin_options', $options );
+			}
 			if (array_key_exists('debug', $options)) {
 				if ( $options['debug'] ) {
 					$this->debugMode = true;
@@ -85,11 +103,19 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 				add_action( 'wp_ajax_isl_ajax_geoloc_query', array(&$this, 'isl_ajax_geoloc_query') );
 				add_action( 'wp_ajax_nopriv_isl_ajax_geoloc_query', array(&$this, 'isl_ajax_geoloc_query') );
 
+				
+				add_action( 'wp_ajax_isl_ajax_list_stores', array(&$this, 'isl_ajax_list_stores') );
+				add_action( 'wp_ajax_nopriv_isl_ajax_list_stores', array(&$this, 'isl_ajax_list_stores') );
+
+
 				add_action( 'admin_enqueue_scripts', array(&$this, 'isl_scripts') );
 
 			} else {
 				add_shortcode( 'ingeni-store-locator', array( &$this, 'ingeni_store_locator_shortcode' ) );
 				add_shortcode( 'ingeni-store-locator-nearest', array( &$this, 'ingeni_store_locator_nearest_shortcode' ) );
+
+				add_shortcode( 'ingeni-store-list', array( &$this, 'ingeni_store_list_shortcode' ) );
+				
 
 				add_action( 'wp_enqueue_scripts', array(&$this, 'isl_scripts') );
 			}
@@ -148,22 +174,22 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 				'rewrite' => array( 'slug' => 'store' ), // my custom slug
 				'menu_icon'   => 'dashicons-store',
 				// Features this CPT supports in Post Editor
-        'supports' => array( 'title', 'editor', 'excerpt', 'author', 'thumbnail', 'revisions', 'custom-fields', ),
+        		'supports' => array( 'title', 'editor', 'excerpt', 'author', 'thumbnail', 'revisions', 'custom-fields', ),
 				// A hierarchical CPT is like Pages and can have Parent and child items.
 				// A non-hierarchical CPT is like Posts
-        'hierarchical' => false,
-        'public' => true,
-        'show_ui' => true,
-        'show_in_menu' => true,
-        'show_in_nav_menus' => true,
-        'show_in_admin_bar' => true,
-        'menu_position' => 5,
-        'can_export' => true,
-        'has_archive' => true,
-        'exclude_from_search' => false,
-        'publicly_queryable' => true,
-        'capability_type' => 'post',
-        'show_in_rest' => true,
+				'hierarchical' => false,
+				'public' => true,
+				'show_ui' => true,
+				'show_in_menu' => true,
+				'show_in_nav_menus' => true,
+				'show_in_admin_bar' => true,
+				'menu_position' => 5,
+				'can_export' => true,
+				'has_archive' => true,
+				'exclude_from_search' => false,
+				'publicly_queryable' => true,
+				'capability_type' => 'post',
+				'show_in_rest' => true,
 				'taxonomies' => array('category','post_tag'),
 				)
 			);
@@ -251,10 +277,11 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 			?>
 			<div class="cell small-12 large-6">
 				<button id="isl_geo_btn" type="button" onclick="isl_geo('',0)">Get Lat/Lng</button>
-			</div>
+			</div></div>
 			<?php
-			$this->render_isl_content( $post, 'phone1', 'Phone #1','cell small-12 large-6',1,0 );
-			$this->render_isl_content( $post, 'phone2', 'Phone #2','cell small-12 large-6',0,1 );
+			$this->render_isl_content( $post, 'contact_name', 'Contact Name','cell small-12 large-4',1,0 );
+			$this->render_isl_content( $post, 'phone1', 'Phone #1','cell small-12 large-4',0,0 );
+			$this->render_isl_content( $post, 'phone2', 'Phone #2','cell small-12 large-4',0,1 );
 			$this->render_isl_content( $post, 'email', 'Email','cell small-12 large-6',1,0 );
 			$this->render_isl_content( $post, 'web', 'Web','cell small-12 large-6',0,1 );
 			$this->render_isl_content( $post, 'lat', 'Lat','cell small-12 large-4',1,0  );
@@ -295,11 +322,14 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 			if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) 
 				return;
 
-
+			if ( !isset($_POST['isl_street_address1_nonce']) ) {
+				return;
+			}
 			if ( !wp_verify_nonce( $_POST['isl_street_address1_nonce'], plugin_basename( __FILE__ ) ) ) {
 				$this->debugLog('isl_content_save: bad nonce');
 				return;
 			}
+
 
 
 
@@ -340,6 +370,9 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 		
 			$new = sanitize_text_field( $_POST['isl_country'], '');
 			update_post_meta( $post_id, '_isl_country', $new );
+
+			$new = sanitize_text_field( $_POST['isl_contact_name'], '');
+			update_post_meta( $post_id, '_isl_contact_name', $new );
 
 			$new = sanitize_text_field( $_POST['isl_phone1'], '');
 			update_post_meta( $post_id, '_isl_phone1', $new );
@@ -432,6 +465,8 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 						$_store_town = get_post_meta( $_store_id, '_isl_town', true );
 						$_store_state = get_post_meta( $_store_id, '_isl_state', true );
 						$_store_postcode = get_post_meta( $_store_id, '_isl_postcode', true );
+
+						$_store_contact_name = get_post_meta( $_store_id, '_isl_contact_name', true );
 
 						$_store_phone = get_post_meta( $_store_id, '_isl_phone1', true );
 						$tel = preg_replace("/[^0-9]/", "", $_store_phone );
@@ -711,6 +746,146 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 			}
 	
 			return $links;
+		}
+
+
+
+		public function ingeni_store_list_shortcode( $atts ) {
+			$params = shortcode_atts( array(
+				'parent_cat' => '',
+				'orderby' => 'name',
+				'order' => 'asc',
+				'class' => 'stores_list',
+				'store_class' => 'store_listing',
+			), $atts );
+
+//$this->debugMode=true;
+
+//$this->debugLog('params:'.print_r($params,true));
+
+			$options = '<option value="0">(View All)</option>';
+
+			if ( $params['parent_cat'] != '') {
+				$parent = get_terms( array( 'taxonomy' => 'category', 'slug' => $params['parent_cat'] ) );
+//$this->debugLog('parent:'.print_r($parent,true));
+
+				$options = '<option value="'.$parent[0]->term_id.'">(View All)</option>';
+				$children = get_terms( array( 'taxonomy' => 'category',  'child_of' => $parent[0]->term_id, 'hide_empty' => true, 'orderby' => $params['orderby'], 'order' => $params['order'] ) );
+//$this->debugLog('children:'.print_r($children,true));
+
+				foreach( $children as $child ) {
+					$options .= '<option value="'.$child->term_id.'">'.$child->name.'</option>';
+				}
+
+			}
+//$this->debugLog('options:'.$options);
+			$retHtml = '<div class="isl_store_list_dropdown">';
+			$retHtml .= '<p>Please select a category:</p>';
+			$retHtml .= '<select id="store_cat_lookup" name="store_cat_lookup" onchange="isl_get_stores_by_cat()">'.$options.'</select>';
+			$retHtml .= '</div>';
+			$retHtml .= '<div id="isl_store_list"></div>';
+
+			return '<div class="'.$params['class'].'">'.$retHtml.'</div>';
+		}
+
+
+		public function isl_ajax_list_stores() {
+			$this->debugLog( 'Made it into the Ajax function safe and sound!' );
+
+			$find_this = $_POST['find_this'];
+
+			$this->debugLog('find_this:'.$find_this);
+
+			$parent_cat = $cat = '';
+			if ($find_this != '') {
+				$cat = $find_this;
+			}
+			
+			$retInfo = json_encode( array('Message' => 'OK', 'html' => $this->isl_store_list($parent_cat, $cat) ) );
+
+
+			$this->debugLog('retInfo:'.$retInfo);
+			echo $retInfo;
+
+			wp_die(); // this is required to terminate immediately and return a proper response
+		}
+
+
+		public function isl_store_list( $parent_cat = '', $cat = '', $orderby = 'name', $order = 'asc', $store_class = 'store_listing' ) {
+//$this->debugLog('isl_store_list:'. $parent_cat.' > '.$cat);
+			$retHtml = '';
+
+			$args = array( 'post_type' => 'ingeni_storelocator', 'post_status' => 'publish', 'posts_per_page' => -1  );
+
+			if ( $cat == '') {
+				$parent = get_terms( array( 'taxonomy' => 'category', $parent_cat ) );
+//$this->debugLog('parent:'.print_r($parent,true));
+
+				$children = get_terms( array( 'taxonomy' => 'category',  'parent' => $parent->term_id ) );
+//$this->debugLog('children:'.print_r($children,true));
+
+				$cat_in = array();
+				foreach( $children as $child ) {
+					array_push($cat_in,$child->term_id);
+				}
+
+				$args += [ 'category__in' => $cat_in ];
+
+			} elseif ( $cat != '') {
+				$args += [ 'cat' => $cat ];
+			}
+
+
+//$this->debugLog( 'args:'.print_r($args,true) );
+
+			$store_query = new WP_Query( $args );
+
+			if ( $store_query->have_posts() ) {
+
+				while ( $store_query->have_posts() ) {
+					$store_query->the_post();
+
+					$_store_name = get_the_title();
+					$_store_id = get_the_ID();
+					$_store_bio = get_the_content();
+
+					$_store_cat_name = '';
+
+					$store_terms = get_the_category( get_the_ID() );
+
+					if ( $store_terms && ( !is_wp_error($store_terms) ) ) {
+						$_store_cat_name = $store_terms[0]->name;
+					}
+
+					$_store_addr1 = get_post_meta( $_store_id, '_isl_street_address1', true );
+					$_store_addr2 = get_post_meta( $_store_id, '_isl_street_address2', true );
+					$_store_town = get_post_meta( $_store_id, '_isl_town', true );
+					$_store_state = get_post_meta( $_store_id, '_isl_state', true );
+					$_store_postcode = get_post_meta( $_store_id, '_isl_postcode', true );
+
+					$_store_contact_name = get_post_meta( $_store_id, '_isl_contact_name', true );
+
+					$_store_phone1 = get_post_meta( $_store_id, '_isl_phone1', true );
+					$tel1 = preg_replace("/[^0-9]/", "", $_store_phone1 );
+
+					$_store_phone2 = get_post_meta( $_store_id, '_isl_phone2', true );
+					$tel2 = preg_replace("/[^0-9]/", "", $_store_phone2 );
+
+					$_store_web = get_post_meta( $_store_id, '_isl_web', true );
+
+					$retHtml .= '<div class="'.$store_class.'"><div class=\'store_name\'><h5>'.$_store_name.'</h5></div>';
+					$retHtml .= '<div class=\'store_info\'>';
+					$retHtml .= '<p class="cat">'.$_store_cat_name.'</p>';
+					$retHtml .= '<p class="contact">'.trim($_store_contact_name).'</p>';
+					$retHtml .= '<p class="ph"><a href=\'tel:'.$tel1.'\' target=\'_blank\'>'.$_store_phone1.'</a></p>';
+					$retHtml .= '<p>'.trim($_store_addr1.' '.$_store_addr2).'</p>';
+					$retHtml .= '<p>'.trim($_store_town.' '.$_store_state.' '.$_store_postcode).'</p>';
+					$retHtml .= '</div>';
+					$retHtml .= '<div class=\'store_bio\'>'.$_store_bio.'</div></div>';
+				}
+
+			}
+			return $retHtml;
 		}
 
 
