@@ -392,7 +392,7 @@ $this->debugLog('dumpit:'.print_r($dumpit,true));
 	}
 
 
-	function isl_upload_to_server( $selectedFile, $tmpFile, $fileSize, $allowed_types = array("csv"), &$err_message, &$zip_path ) {
+	function isl_upload_to_server( $selectedFile, $tmpFile, $fileSize, $allowed_types = array("csv"), &$err_message = '', &$zip_path = '' ) {
 		try {
 				$upl_folder = wp_upload_dir();
 

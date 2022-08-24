@@ -5,7 +5,7 @@ Plugin URI: https://github.com/BruceMcKinnon/ingeni-store-locator
 Description: Simple store location with support for OSM and Leaflet maps
 Author: Bruce McKinnon
 Author URI: https://ingeni.net
-Version: 2022.02
+Version: 2022.03
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
@@ -36,7 +36,9 @@ License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 		- Added support for Contact Name
 		- Fixed an unclosed row error in isl_add_meta_boxes();
 		- Added [ingeni-store-list] for displaying an ajax enabled list of stores
-		
+
+2022.03 - IngeniStoreCsvImport->isl_upload_to_server() - Fixed optional parameter defaults for PHP 8
+
 */
 
 
