@@ -5,7 +5,7 @@ Plugin URI: https://github.com/BruceMcKinnon/ingeni-store-locator
 Description: Simple store location with support for OSM and Leaflet maps
 Author: Bruce McKinnon
 Author URI: https://ingeni.net
-Version: 2022.03
+Version: 2022.04
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
@@ -38,6 +38,8 @@ License URI: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 		- Added [ingeni-store-list] for displaying an ajax enabled list of stores
 
 2022.03 - IngeniStoreCsvImport->isl_upload_to_server() - Fixed optional parameter defaults for PHP 8
+
+2022.04 - Loads Leaflet libraries in the shortcodes.
 
 */
 
@@ -118,8 +120,8 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 
 				add_shortcode( 'ingeni-store-list', array( &$this, 'ingeni_store_list_shortcode' ) );
 				
-
 				add_action( 'wp_enqueue_scripts', array(&$this, 'isl_scripts') );
+				add_action( 'wp_enqueue_scripts', array(&$this, 'isl_register_leaflet') );
 			}
 
 			
@@ -127,6 +129,26 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 			include_once(plugin_dir_path( __FILE__ ).'isl_distance_support.php');
 		}
 		
+
+		public function isl_register_leaflet() {
+			// Register Leaflet
+			$siteurl = get_option('siteurl');
+			$url = $siteurl . '/wp-content/plugins/' . basename(dirname(__FILE__));
+			wp_register_style( 'bl-leaflet-style', $url . '/leaflet/leaflet.css' );
+			wp_register_script( 'bl-leaflet-script', $url . '/leaflet/leaflet.js', array('jquery'), "1.0", false );
+			wp_register_script( 'bl-leaflet-ajax', $url . '/leaflet/leaflet.ajax.min.js', array('jquery'), "1.0", false );
+			wp_register_script( 'bl-leaflet-providers-script', $url . '/leaflet/leaflet-providers.js', array('bl-leaflet-script'), "0.1", false );
+
+		}
+
+		public function isl_enqueue_leaflet() {
+			wp_enqueue_style( 'bl-leaflet-style' );
+			wp_enqueue_script( 'bl-leaflet-script' );
+			wp_enqueue_script( 'bl-leaflet-ajax' );
+			wp_enqueue_script( 'bl-leaflet-providers-script' );
+		}
+
+
 		function isl_scripts() {
 			wp_enqueue_style( 'ingeni-isl-css', plugins_url('css/ingeni-isl.css', __FILE__) );
 
@@ -425,6 +447,7 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 					'tags' => '',
 			), $att );
 
+
 			$idx = 0;
 
 			global $wpdb;
@@ -516,6 +539,9 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 				$islMaps = new IngeniStoreLocatorMaps( $this->debugMode );
 			}
 			if ($islMaps) {
+				// Enqueue the Leaflet libraries
+				$this->isl_enqueue_leaflet();
+
 				$retHtml .= $islMaps->isl_show_open_street_cluster_map( $params );
 			} else {
 				$retHtml .= '<p><strong>Can\'t load IngeniStoreLocatorMaps!</strong</p>';
@@ -564,6 +590,9 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 				'tags_title' => 'Tags',
 			), $atts );
 
+			// Enqueue the Leaflet libraries
+			$this->isl_enqueue_leaflet();
+			
 			$retHtml = '';
 //$this->debugLog('ingeni_store_locator_nearest_shortcode :'.print_r($address_atts,true));
 			$retHtml .= '<div id="isl_nearest_form">';
@@ -764,6 +793,9 @@ if ( !class_exists( 'IngeniStoreLocator' ) ) {
 //$this->debugMode=true;
 
 //$this->debugLog('params:'.print_r($params,true));
+
+			// Enqueue the Leaflet libraries
+			$this->isl_enqueue_leaflet();
 
 			$options = '<option value="0">(View All)</option>';
 
